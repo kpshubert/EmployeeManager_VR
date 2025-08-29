@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import Department from './Views/Department/Department';
 import Employee from './Views/Employee/Employee';
 import Home from './Views/Home/Home';
+import "bootstrap/dist/css/bootstrap.min.css";
 function App() {
     return (
         <>
