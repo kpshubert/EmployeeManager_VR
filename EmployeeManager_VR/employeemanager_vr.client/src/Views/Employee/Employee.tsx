@@ -1,26 +1,18 @@
-import React, { Component } from 'react';
+import { useEffect, useState } from 'react';
 import './Employee.css';
 import type { EmployeeModel } from '../../Models/employeemodel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faEdit, faWindowClose, faCheckSquare } from '@fortawesome/free-regular-svg-icons';
+import { faSave, faEdit, faWindowClose } from '@fortawesome/free-regular-svg-icons';
+import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 
-class Employee extends Component {
+const Employee = () => {
 
-    constructor() {
-        super();
+    const [departments, setDepartments] = useState([]);
+    const [employees, setEmployees] = useState([]);
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(true);
 
-        this.state = {
-            employees: null,
-            loading: true,
-            error: null
-        };
-
-        this.onInputChange = this.onInputChange.bind(this);
-        this.onSubmitForm = this.onSubmitForm.bind(this);
-    }
-    employees: EmployeeModel[] = [];
-
-    currentEmployee: EmployeeModel = {
+    let currentEmployee: EmployeeModel = {
         rowNum: 0,
         id: 0,
         firstName: '',
@@ -33,45 +25,93 @@ class Employee extends Component {
         formMode: 'add'
     };
 
-    onInputChange(event) {
-        this.setState({
-            [event.target.name]: event.target.value
-        });
-        this.currentEmployee[event.target.name] = event.target.value;
-    }
-
-    onSubmitForm(event) {
-        console.log(this.currentEmployee);
-    }
-
-    componentDidMount() {
+    const getEmployees = () => {
         fetch('/employee?id=0&mode=list')
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    throw new Error('Employee get failed');
                 }
                 return response.json();
             })
             .then(data => {
-                this.setState({ employees: data, loading: false });
+                setEmployees(data);
+                setLoading(false);
             })
             .catch(error => {
-                this.setState({ error: error.message, loading: false });
+                setError(error.message);
+                setLoading(false);
             });
     }
 
-    render() {
-        const { employees, loading, error } = this.state;
+    const getDepartments = () => {
+        fetch('/department?id=0&mode=list')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Departments get failed');
+                }
+                return response.json();
+            })
+            .then(data => {
+                setDepartments(data);
+                setLoading(false);
+            })
+            .catch(error => {
+                setError(error.message);
+                setLoading(false);
+            });
+    }
 
-        if (loading) {
-            return <div>Loading...</div>;
-        }
-        if (error) {
-            return <div>Error: {error}</div>;
-        }
+    useEffect(() => {
+        getEmployees();
+        getDepartments();
 
+        // Optionally, return a cleanup function if needed
+        return () => {
+            // Cleanup code here if necessary
+        };
+    }, []); // Empty dependency array means this effect runs once, like componentDidMount
+
+    const onInputChange = (event) => {
+    }
+
+    const onSubmitForm = (event) => {
+    }
+
+    const loadingDisplay =
+        <div>
+            <div className="row mb-2">
+                <div className="col-md-12">
+                    <FontAwesomeIcon icon={faSpinner} className="fa-spin" size="2x"></FontAwesomeIcon>
+                </div>
+            </div>
+            <div className="row">
+                <div className="col-md-12">
+                    Loading Employee Information...
+                </div>
+            </div>
+        </div>;
+
+    const errorDisplay =
+        <div>Error: {error}</div>;
+
+    const renderSelectControlOptions = () => {
+        const rows = [];
+        if (departments != null && departments.length !== 0) {
+            for (let currentDepartment = 0; currentDepartment < departments.length; currentDepartment++) {
+                const department = departments[currentDepartment];
+                rows.push(
+                    <option value={department.idString}>{department.name}</option>
+                );
+            }
+        }
+        return rows;
+    }
+
+    const optionList = renderSelectControlOptions();
+
+    const renderTable = () => {
+        const rows = [];
         if (employees !== null && employees.length !== 0) {
-            const rows = [];
             for (let currentEmployee = 0; currentEmployee < employees.length; currentEmployee++) {
                 const employee = employees[currentEmployee];
                 rows.push(
@@ -92,85 +132,86 @@ class Employee extends Component {
                     </tr>
                 );
             }
-
-            const employeeTable = <table className="table table-striped table-hover table-bordered" aria-labelledby="tableLabel">
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>First Name</th>
-                        <th>Last Name</th>
-                        <th>Phone Number</th>
-                        <th>Email</th>
-                        <th>Department Name</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows}
-                </tbody>
-            </table>;
-
-            return (
-                <div>
-                    <h1 id="tableLabel">Employee Data</h1>
-                    <form>
-                        {employeeTable}
-                        <fieldset className="border border-primary rounded rounded-3 p-2">
-                            <legend>Add/Edit Employee</legend>
-                            <div className="row mb-2">
-                                <div className="col-md-6">
-                                    <div className="form-floating mb-1">
-                                        <input name="firstName" id="firstame" type="text" onChange={this.onInputChange} placeholder="First Name" className="form-control" value={this.currentEmployee.firstName}></input>
-                                        <label className="form-label" htmlFor="firstName">First Name</label>
-                                    </div>
-                                </div>
-                                <div className="col-md-6">
-                                    <div className="form-floating mb-1">
-                                        <input name="lastName" id="lastName" type="text" onChange={this.onInputChange} placeholder="Last Name" className="form-control" value={this.currentEmployee.lastName}></input>
-                                        <label className="form-label" htmlFor="lastName">Last Name</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="row mb-2">
-                                <div className="col-md-6">
-                                    <div className="form-floating mb-1">
-                                        <input name="phone" id="phone" type="text" onChange={this.onInputChange} placeholder="Phone Number" className="form-control" value={this.currentEmployee.phone}></input>
-                                        <label className="form-label" htmlFor="phone">Phone Number</label>
-                                    </div>
-                                </div>
-                                <div className="col-md-6">
-                                    <div className="form-floating mb-1">
-                                        <input name="email" id="email" type="text" onChange={this.onInputChange} placeholder="Email" className="form-control" value={this.currentEmployee.email}></input>
-                                        <label className="form-label" htmlFor="email">Email</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="row mb-2">
-                                <div className="col-md-6">
-                                    <div className="form-floating mb-1">
-                                        <select name="departmentIdString" id="departmentIdString" type="text" onChange={this.onInputChange} placeholder="Department Name" className="form-select" value={this.currentEmployee.departmentIdString}>
-                                            <option value=''>--please select--</option>
-                                        </select>
-                                        <label className="form-label" htmlFor="name">Department Name</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <button className="btn btn-primary" type="button">
-                                <FontAwesomeIcon icon={faSave} onClick={this.onSubmitForm}></FontAwesomeIcon>&nbsp;Save
-                            </button>
-                        </fieldset>
-                    </form>
-                </div>
-            )
         }
+        return rows;
+    }
 
-    }
-    async populateEmployeeData() {
-        const response = await fetch('employee?id=0&mode=list');
-        if (response.ok) {
-            const data = await response.json();
-            this.employees = data;
-        }
-    }
+    const rows = renderTable();
+
+    const selectControl =
+        <select name="departmentIdString" id="departmentIdString" onChange={onInputChange} className="form-select" value={currentEmployee.departmentIdString}>
+            <option value=''>--please select--</option>
+            {optionList}
+        </select>;
+
+
+    const employeeTable = <table className="table table-striped table-hover table-bordered" aria-labelledby="tableLabel">
+        <thead>
+            <tr>
+                <th></th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Phone Number</th>
+                <th>Email</th>
+                <th>Department Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            {rows}
+        </tbody>
+    </table>;
+
+    return (
+        loading ? loadingDisplay :
+            <div>
+                <h1 id="tableLabel">Employee Data</h1>
+                <form>
+                    {employeeTable}
+                    <fieldset className="border border-primary rounded rounded-3 p-2">
+                        <legend>Add/Edit Employee</legend>
+                        <div className="row mb-2">
+                            <div className="col-md-6">
+                                <div className="form-floating mb-1">
+                                    <input name="firstName" id="firstame" type="text" onChange={onInputChange} placeholder="First Name" className="form-control" value={currentEmployee.firstName}></input>
+                                    <label className="form-label" htmlFor="firstName">First Name</label>
+                                </div>
+                            </div>
+                            <div className="col-md-6">
+                                <div className="form-floating mb-1">
+                                    <input name="lastName" id="lastName" type="text" onChange={onInputChange} placeholder="Last Name" className="form-control" value={currentEmployee.lastName}></input>
+                                    <label className="form-label" htmlFor="lastName">Last Name</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="row mb-2">
+                            <div className="col-md-6">
+                                <div className="form-floating mb-1">
+                                    <input name="phone" id="phone" type="text" onChange={onInputChange} placeholder="Phone Number" className="form-control" value={currentEmployee.phone}></input>
+                                    <label className="form-label" htmlFor="phone">Phone Number</label>
+                                </div>
+                            </div>
+                            <div className="col-md-6">
+                                <div className="form-floating mb-1">
+                                    <input name="email" id="email" type="text" onChange={onInputChange} placeholder="Email" className="form-control" value={currentEmployee.email}></input>
+                                    <label className="form-label" htmlFor="email">Email</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="row mb-2">
+                            <div className="col-md-6">
+                                <div className="form-floating mb-1">
+                                    {selectControl}
+                                    <label className="form-label" htmlFor="name">Department Name</label>
+                                </div>
+                            </div>
+                        </div>
+                        <button className="btn btn-primary" type="button">
+                            <FontAwesomeIcon icon={faSave} onClick={onSubmitForm}></FontAwesomeIcon>&nbsp;Save
+                        </button>
+                    </fieldset>
+                </form>
+            </div>
+    )
 }
 
 export default Employee;
