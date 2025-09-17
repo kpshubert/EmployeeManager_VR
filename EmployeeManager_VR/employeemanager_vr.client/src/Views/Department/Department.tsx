@@ -1,13 +1,14 @@
+import ReactTable from "../../Shared/ReactTable";
 import React, { useEffect, useState } from 'react';
 import './Department.css';
+import { createColumnHelper } from '@tanstack/react-table';
 import type { DepartmentModel } from '../../Models/departmentmodel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faEdit, faWindowClose, faCheckSquare } from '@fortawesome/free-regular-svg-icons';
+import { faSave, faEdit, faTrashCan, faCircleXmark } from '@fortawesome/free-regular-svg-icons';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 
 function Department() {
 
-    //let departments: DepartmentModel[] = [];
     let currentDepartment: DepartmentModel = {
         id: 0,
         idString: '0',
@@ -63,78 +64,71 @@ function Department() {
     const onSubmitForm = (event) => {
     }
 
-    const renderTable = () => {
+    const columnHelper = createColumnHelper<DepartmentModel>();
+    const columns = [
+        // Add a custom column for actions (edit/delete)
+        columnHelper.display({
+            id: 'actions',
+            header: 'Actions',
+            enableSorting: false,
+            cell: ({ row }) => {
+                const handleDelete = () => {
+                    // This function should remove the row from the data state
+                    // For example, if you're using useState to manage data:
+                    //setData(prevData => prevData.filter(item => item.id !== row.original.id));
+                };
 
-        let returnValue = []
+                const handleEdit = () => { };
 
-        if (departments !== null && departments.length !== 0) {
-            const rows = [];
-            for (let currentDepartment = 0; currentDepartment < departments.length; currentDepartment++) {
-                const department = departments[currentDepartment];
-                if (department.isAssigned) {
-                    rows.push(
-                        <tr key={currentDepartment}>
-                            <td>
-                                <div className="row">
-                                    <div className="col-md-auto">
-                                        <button type="button" className="btn btn-success" value={department.idString}>
-                                            <FontAwesomeIcon icon={faEdit}></FontAwesomeIcon>
-                                        </button>
-                                    </div>
-                                    <div className="col-md">
-                                        <div className='text-light bg-info border border-primary rounded rounded-3 p-1 mt-1'>
-                                            <FontAwesomeIcon icon={faCheckSquare}></FontAwesomeIcon>Department Asssigned
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>{department.name}</td>
-                        </tr>
-                    );
-                } else {
-                    rows.push(
-                        <tr key={currentDepartment}>
-                            <td>
-                                <button type="button" className="btn btn-success" value={department.idString}>
-                                    <FontAwesomeIcon icon={faEdit}></FontAwesomeIcon>
-                                </button>
-                                <button type="button" className="btn btn-danger" value={department.idString}>
-                                    <FontAwesomeIcon icon={faWindowClose}></FontAwesomeIcon>
-                                </button>
-                            </td>
-                            <td>{department.name}</td>
-                        </tr>
-                    );
-                }
-            };
-            if (rows !== null && rows.length > 0) {
-                returnValue = rows;
-            }
-        }
-        return returnValue;
-    }
+                const actionButtons = () => {
+                    const returnValue =
+                        row.original.isAssigned ?
+                            <span className="alert bg-info text-light p-1 pb-2 ms-1"><FontAwesomeIcon icon={faCircleXmark}></FontAwesomeIcon>&nbsp;Assigned</span>
+                            :
+                            <button
+                                onClick={handleDelete}
+                                className="btn btn-danger text-white px-2 py-1 rounded text-sm"
+                            >
+                                <FontAwesomeIcon icon={faTrashCan}></FontAwesomeIcon>
+                            </button>
 
-    const renderTableReturn = renderTable();
+                    return returnValue;
+                };
 
-    const departmentTable =
-        <table className="table table-striped table-hover table-bordered" aria-labelledby="tableLabel">
-        <thead>
-            <tr>
-                <th></th>
-                <th>Department Name</th>
-            </tr>
-        </thead>
-        <tbody>
-            {renderTableReturn}
-        </tbody>
-    </table>;
-
+                return (
+                    <div>
+                        <button
+                            onClick={handleEdit}
+                            className="btn btn-success text-white px-2 py-1 rounded text-sm"
+                        >
+                            <FontAwesomeIcon icon={faEdit}></FontAwesomeIcon>
+                        </button>
+                        {actionButtons()}
+                    </div>
+                );
+            },
+        }),
+        columnHelper.accessor('name', {
+            header: 'Department Name',
+            cell: (info) => info.getValue(),
+        })
+    ];
     return (
         loading ? loadingDisplay :
             <div>
-                <h1 id="tableLabel">Department Data</h1>
                 <form>
-                    {departmentTable}
+                    <div className="row">
+                        <div className="col-md-12">
+                            <div className="d-flex justify-content-center">
+                                <h1 id="tableLabel" className="text-2xl font-bold mb-4">Department Data</h1>
+                            </div>
+                        </div>
+                        <div className="col-md-12">
+                            <div className="d-flex justify-content-center">
+                                <ReactTable data={departments} columns={columns} initialSort='name' />
+                            </div>
+                        </div>
+                    </div>
                     <fieldset className="border border-primary rounded rounded-3 p-2">
                         <legend>Add/Edit Department</legend>
                         <div className="row mb-2">
@@ -149,8 +143,8 @@ function Department() {
                             <FontAwesomeIcon icon={faSave} onClick={onSubmitForm}></FontAwesomeIcon>&nbsp;Save
                         </button>
                     </fieldset>
-                </form>
-            </div>
+                </form >
+            </div >
     )
 }
 
