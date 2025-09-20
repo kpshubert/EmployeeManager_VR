@@ -74,7 +74,7 @@ const EmployeeManager = () => {
             for (let currentDepartment = 0; currentDepartment < departments.length; currentDepartment++) {
                 const department = departments[currentDepartment];
                 rows.push(
-                    <option value={department.idString}>{department.name}</option>
+                    <option key={currentDepartment} value={department.idString}>{department.name}</option>
                 );
             }
         }
@@ -85,7 +85,7 @@ const EmployeeManager = () => {
 
     const selectControl =
         <select name="departmentIdString" id="departmentIdString" onChange={onInputChange} className="form-select" value={departmentIdString}>
-            <option value=''>--please select--</option>
+            <option key={-1} value=''>--please select--</option>
             {optionList}
         </select>;
 
@@ -106,8 +106,8 @@ const EmployeeManager = () => {
 
                 const handleEdit = () => {
                     const loadCurrentEmployee = async () => {
-                        setUpdatingCurrent(true);
                         if (!Number.isNaN(row.original.id)) {
+                            setUpdatingCurrent(true);
                             const fetchedEmployee = await fetchEmployees(row.original.id, '');
                             if (fetchedEmployee !== null
                                 && fetchedEmployee !== undefined
@@ -122,6 +122,7 @@ const EmployeeManager = () => {
                                 setDepartmentIdString(currentEmployee.departmentIdString);
                                 setFormMode(currentEmployee.formMode);
                             }
+                            setUpdatingCurrent(false);
                         }
                     };
 
@@ -132,6 +133,7 @@ const EmployeeManager = () => {
                 const actionButtons = () => {
                     const returnValue =
                         <button
+                            type="button"
                             onClick={handleDelete}
                             className="btn btn-danger text-white px-2 py-1 rounded text-sm"
                         >
@@ -143,6 +145,7 @@ const EmployeeManager = () => {
                 return (
                     <div>
                         <button
+                            type="button"
                             onClick={handleEdit}
                             className="btn btn-success text-white px-2 py-1 rounded text-sm"
                         >
@@ -207,12 +210,11 @@ const EmployeeManager = () => {
                     setLoading(false);
                 }
             }
-            setUpdatingCurrent(false);
         }
 
         loadEmployees();
 
-    }, [updatingCurrent]); // Empty dependency array means this effect runs once, like componentDidMount
+    }, []); // Empty dependency array means this effect runs once, like componentDidMount
 
     function handleAddButtonClick(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
         currentEmployee.formMode = 'add';

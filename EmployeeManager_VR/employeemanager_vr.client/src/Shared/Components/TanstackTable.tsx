@@ -111,6 +111,7 @@ const TanstackTable = <T,>({ data, columns, initialSort }: ReactTableProps<T>) =
                 <div className="col-md-1"></div>
                 <div className="col-md-10">
                     <button
+                        type="button"
                         className="btn btn-light border p-1"
                         onClick={() => table.firstPage()}
                         disabled={!table.getCanPreviousPage()}
@@ -118,6 +119,7 @@ const TanstackTable = <T,>({ data, columns, initialSort }: ReactTableProps<T>) =
                         <FontAwesomeIcon icon={faAngleDoubleLeft} />
                     </button>
                     <button
+                        type="button"
                         className="btn btn-light border p-1"
                         onClick={() => table.previousPage()}
                         disabled={!table.getCanPreviousPage()}
@@ -125,20 +127,17 @@ const TanstackTable = <T,>({ data, columns, initialSort }: ReactTableProps<T>) =
                         <FontAwesomeIcon icon={faAngleLeft} />
                     </button>
                     <button
+                        type="button"
                         className="btn btn-light border p-1"
                         onClick={() => {
-                            console.log('running table.nextPage');
-                            console.log('Before: ' + table.getState().pagination.pageIndex + 1);
-                            console.log('Page Count: ' + table.getPageCount());
                             table.nextPage();
-                            console.log('After: ' + table.getState().pagination.pageIndex + 1);
-                            console.log('tabld.nextPage should have run');
                         }}
                         disabled={!table.getCanNextPage()}
                     >
                         <FontAwesomeIcon icon={faAngleRight} />
                     </button>
                     <button
+                        type="button"
                         className="btn btn-light border p-1"
                         onClick={() => table.lastPage()}
                         disabled={!table.getCanNextPage()}
