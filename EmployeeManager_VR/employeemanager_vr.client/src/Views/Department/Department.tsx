@@ -55,12 +55,11 @@ function Department() {
                     setLoading(false);
                 }
             }
-            setUpdatingCurrent(false);
         }
 
         loadDepartments();
 
-    }, [updatingCurrent]); // Empty dependency array means this effect runs once, like componentDidMount
+    }, []); // Empty dependency array means this effect runs once, like componentDidMount
 
     const onInputChange = (event) => {
         setDepartmentName(event.target.value);
@@ -96,9 +95,9 @@ function Department() {
 
                 const handleEdit = () => {
                     const loadCurrentDepartment = async () => {
-                        setUpdatingCurrent(true);
                         const currentDepartmentIdString: number = + row.original.idString;
                         if (!Number.isNaN(currentDepartmentIdString)) {
+                            setUpdatingCurrent(true);
                             const fetchedDepartment = await fetchDepartments(currentDepartmentIdString, '');
                             if (fetchedDepartment !== null
                                 && fetchedDepartment !== undefined
@@ -109,6 +108,7 @@ function Department() {
                                 setDepartmentName(currentDepartment.name);
                                 setFormMode(currentDepartment.formMode);
                             }
+                            setUpdatingCurrent(false);
                         }
                     };
 
@@ -122,6 +122,7 @@ function Department() {
                             <span className="alert bg-info text-light p-1 pb-2 ms-1"><FontAwesomeIcon icon={faCircleXmark}></FontAwesomeIcon>&nbsp;Assigned</span>
                             :
                             <button
+                                type="button"
                                 onClick={handleDelete}
                                 className="btn btn-danger text-white px-2 py-1 rounded text-sm"
                             >
@@ -134,6 +135,7 @@ function Department() {
                 return (
                     <div>
                         <button id={row.original.idString}
+                            type="button"
                             onClick={handleEdit}
                             className="btn btn-success text-white px-2 py-1 rounded text-sm"
                         >
