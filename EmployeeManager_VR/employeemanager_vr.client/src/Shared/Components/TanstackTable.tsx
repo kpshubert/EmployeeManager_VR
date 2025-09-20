@@ -11,7 +11,7 @@ import {
 } from '@tanstack/react-table';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSortUp, faSortDown, faAngleDoubleRight, faAngleRight, faAngleDoubleLeft, faAngleLeft } from "@fortawesome/free-solid-svg-icons";
-import Filter from './filter';
+import Filter from './Filter';
 
 interface ReactTableProps<T> {
     data: T[];
@@ -20,7 +20,7 @@ interface ReactTableProps<T> {
 }
 
 // ReactTable component
-const ReactTable = <T,>({ data, columns, initialSort }: ReactTableProps<T>) => {
+const TanstackTable = <T,>({ data, columns, initialSort }: ReactTableProps<T>) => {
 
     const [pagination, setPagination] = useState<PaginationState>({
         pageIndex: 0,
@@ -201,4 +201,4 @@ const ReactTable = <T,>({ data, columns, initialSort }: ReactTableProps<T>) => {
     );
 };
 
-export default ReactTable;
+export default TanstackTable;

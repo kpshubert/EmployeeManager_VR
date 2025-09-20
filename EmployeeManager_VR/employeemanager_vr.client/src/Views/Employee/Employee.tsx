@@ -1,10 +1,12 @@
-import ReactTable from "../../Shared/ReactTable";
+import TanstackTable from "../../Shared/Components/TanstackTable";
 import { useState, useEffect } from 'react';
 import type { EmployeeModel } from '../../Models/employeemodel'
 import { createColumnHelper } from '@tanstack/react-table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrashCan, faEdit, faSave } from '@fortawesome/free-regular-svg-icons';
-import { faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faFloppyDisk, faEdit, faTrashCan, faPlusSquare } from '@fortawesome/free-regular-svg-icons';
+import { faSpinner, faPlusCircle } from '@fortawesome/free-solid-svg-icons';
+import { fetchEmployees } from '../../Shared/Services/Employee/EmployeeService';
+import { fetchDepartments } from '../../Shared/Services/Department/DepartmentService';
 
 // Example usage
 const EmployeeManager = () => {
@@ -12,6 +14,14 @@ const EmployeeManager = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
     const [departments, setDepartments] = useState([]);
+    const [updatingCurrent, setUpdatingCurrent] = useState(false);
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
+    const [departmentIdString, setDepartmentIdString] = useState('');
+    const [formMode, setFormMode] = useState('add');
+
     const data = [];
 
     let currentEmployee: EmployeeModel = {
@@ -28,9 +38,34 @@ const EmployeeManager = () => {
     };
 
     const onInputChange = (event) => {
+        if (event.target.name === "firstName") {
+            setFirstName(event.target.value);
+        }
+        if (event.target.name === "lastName") {
+            setLastName(event.target.value);
+        }
+        if (event.target.name === "email") {
+            setEmail(event.target.value);
+        }
+        if (event.target.name === "phone") {
+            setPhone(event.target.value);
+        }
+        if (event.target.name === "departmentidString") {
+            setDepartmentIdString(event.target.value);
+        }
+        currentEmployee[event.target.name] = event.target.value;
     }
 
     const onSubmitForm = (event) => {
+    }
+
+    const submitIcon = () => {
+        return (
+            formMode === "add" ?
+                <span><FontAwesomeIcon icon={faPlusCircle} />&nbsp;Save New</span>
+                :
+                <span><FontAwesomeIcon icon={faFloppyDisk} />&nbsp;Update</span>
+        );
     }
 
     const renderSelectControlOptions = () => {
@@ -49,30 +84,13 @@ const EmployeeManager = () => {
     const optionList = renderSelectControlOptions();
 
     const selectControl =
-        <select name="departmentIdString" id="departmentIdString" onChange={onInputChange} className="form-select" value={currentEmployee.departmentIdString}>
+        <select name="departmentIdString" id="departmentIdString" onChange={onInputChange} className="form-select" value={departmentIdString}>
             <option value=''>--please select--</option>
             {optionList}
         </select>;
 
-    const getEmployees = () => {
-        fetch('/employee?id=0&mode=list')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Employee get failed');
-                }
-                return response.json();
-            })
-            .then(data => {
-                setEmployees(data);
-                setLoading(false);
-            })
-            .catch(error => {
-                setError(error.message);
-                setLoading(false);
-            });
-    }
-
     const columnHelper = createColumnHelper<EmployeeModel>();
+
     const columns = [
         // Add a custom column for actions (edit/delete)
         columnHelper.display({
@@ -86,7 +104,30 @@ const EmployeeManager = () => {
                     //setData(prevData => prevData.filter(item => item.id !== row.original.id));
                 };
 
-                const handleEdit = () => { };
+                const handleEdit = () => {
+                    const loadCurrentEmployee = async () => {
+                        setUpdatingCurrent(true);
+                        if (!Number.isNaN(row.original.id)) {
+                            const fetchedEmployee = await fetchEmployees(row.original.id, '');
+                            if (fetchedEmployee !== null
+                                && fetchedEmployee !== undefined
+                                && fetchedEmployee.length !== null
+                                && fetchedEmployee.length !== undefined
+                                && fetchedEmployee.length === 1) {
+                                currentEmployee = fetchedEmployee[0];
+                                setFirstName(currentEmployee.firstName);
+                                setLastName(currentEmployee.lastName);
+                                setEmail(currentEmployee.email);
+                                setPhone(currentEmployee.phone);
+                                setDepartmentIdString(currentEmployee.departmentIdString);
+                                setFormMode(currentEmployee.formMode);
+                            }
+                        }
+                    };
+
+                    loadCurrentEmployee();
+
+                };
 
                 const actionButtons = () => {
                     const returnValue =
@@ -148,31 +189,72 @@ const EmployeeManager = () => {
     </div>;
 
     useEffect(() => {
-        getEmployees();
-        return () => {
-            // Cleanup code here if necessary
-        };
-    }, []);
+        const loadEmployees = async () => {
+            if (!updatingCurrent) {
+                try {
+                    setLoading(true);
+                    const employeesInfo = await fetchEmployees(0, 'list');
+                    setEmployees(employeesInfo);
+                    const departmentsInfo = await fetchDepartments(0, 'list');
+                    setDepartments(departmentsInfo);
+                } catch (err) {
+                    if (err instanceof Error) {
+                        setError(err.message);
+                    } else {
+                        setError('An unknown error occurred');
+                    }
+                } finally {
+                    setLoading(false);
+                }
+            }
+            setUpdatingCurrent(false);
+        }
+
+        loadEmployees();
+
+    }, [updatingCurrent]); // Empty dependency array means this effect runs once, like componentDidMount
+
+    function handleAddButtonClick(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
+        currentEmployee.formMode = 'add';
+        currentEmployee.idString = '0';
+        currentEmployee.id = 0;
+        currentEmployee.firstName = '';
+        currentEmployee.lastName = '';
+        currentEmployee.email = '';
+        currentEmployee.phone = '';
+        currentEmployee.departmentIdString = '';
+        setFirstName('');
+        setLastName('');
+        setEmail('');
+        setPhone('');
+        setDepartmentIdString('0');
+        setFormMode('add');
+    }
 
     return (
         loading ? loadingDisplay :
             <form>
+                <div className="row">
+                    <div className="col-md-auto">
+                        <button type="button" className="btn btn-success" onClick={handleAddButtonClick}><FontAwesomeIcon icon={faPlusSquare}></FontAwesomeIcon>&nbsp;Add Employee</button>
+                    </div>
+                </div>
                 <div className="p-4">
                     <h1 className="text-2xl font-bold mb-4">Employee Data</h1>
-                    <ReactTable data={employees} columns={columns} initialSort='lastName' />
+                    <TanstackTable data={employees} columns={columns} initialSort='lastName' />
                 </div>
                 <fieldset className="border border-primary rounded rounded-3 p-2">
                     <legend>Add/Edit Employee</legend>
                     <div className="row mb-2">
                         <div className="col-md-6">
                             <div className="form-floating mb-1">
-                                <input name="firstName" id="firstame" type="text" onChange={onInputChange} placeholder="First Name" className="form-control" value={currentEmployee.firstName}></input>
+                                <input name="firstName" id="firstame" type="text" onChange={onInputChange} placeholder="First Name" className="form-control" value={firstName}></input>
                                 <label className="form-label" htmlFor="firstName">First Name</label>
                             </div>
                         </div>
                         <div className="col-md-6">
                             <div className="form-floating mb-1">
-                                <input name="lastName" id="lastName" type="text" onChange={onInputChange} placeholder="Last Name" className="form-control" value={currentEmployee.lastName}></input>
+                                <input name="lastName" id="lastName" type="text" onChange={onInputChange} placeholder="Last Name" className="form-control" value={lastName}></input>
                                 <label className="form-label" htmlFor="lastName">Last Name</label>
                             </div>
                         </div>
@@ -180,13 +262,13 @@ const EmployeeManager = () => {
                     <div className="row mb-2">
                         <div className="col-md-6">
                             <div className="form-floating mb-1">
-                                <input name="phone" id="phone" type="text" onChange={onInputChange} placeholder="Phone Number" className="form-control" value={currentEmployee.phone}></input>
+                                <input name="phone" id="phone" type="text" onChange={onInputChange} placeholder="Phone Number" className="form-control" value={phone}></input>
                                 <label className="form-label" htmlFor="phone">Phone Number</label>
                             </div>
                         </div>
                         <div className="col-md-6">
                             <div className="form-floating mb-1">
-                                <input name="email" id="email" type="text" onChange={onInputChange} placeholder="Email" className="form-control" value={currentEmployee.email}></input>
+                                <input name="email" id="email" type="text" onChange={onInputChange} placeholder="Email" className="form-control" value={email}></input>
                                 <label className="form-label" htmlFor="email">Email</label>
                             </div>
                         </div>
@@ -199,8 +281,8 @@ const EmployeeManager = () => {
                             </div>
                         </div>
                     </div>
-                    <button className="btn btn-primary" type="button">
-                        <FontAwesomeIcon icon={faSave} onClick={onSubmitForm}></FontAwesomeIcon>&nbsp;Save
+                    <button className="btn btn-primary" type="button" onClick={onSubmitForm}>
+                        {submitIcon()}
                     </button>
                 </fieldset>
             </form >

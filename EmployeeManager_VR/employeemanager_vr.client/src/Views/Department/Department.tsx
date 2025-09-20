@@ -1,11 +1,12 @@
-import ReactTable from "../../Shared/ReactTable";
+import TanstackTable from "../../Shared/Components/TanstackTable";
 import React, { useEffect, useState } from 'react';
 import './Department.css';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { DepartmentModel } from '../../Models/departmentmodel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faEdit, faTrashCan, faCircleXmark } from '@fortawesome/free-regular-svg-icons';
-import { faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faFloppyDisk, faEdit, faTrashCan, faCircleXmark, faPlusSquare } from '@fortawesome/free-regular-svg-icons';
+import { faSpinner, faPlusCircle } from '@fortawesome/free-solid-svg-icons';
+import { fetchDepartments } from '../../Shared/Services/Department/DepartmentService';
 
 function Department() {
 
@@ -15,21 +16,6 @@ function Department() {
         name: '',
         formMode: 'add',
         isAssigned: false
-    };
-
-    const fetchDepartments = async () => {
-        try {
-            const response = await fetch('/department?id=0&mode=list');
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            const data = await response.json();
-            setDepartments(data);
-            setLoading(false);
-        } catch (error) {
-            setError(error.message);
-            setLoading(false);
-        }
     };
 
     const loadingDisplay = <div>
@@ -46,25 +32,55 @@ function Department() {
     </div>;
 
     const [departments, setDepartments] = useState(null);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
+    const [updatingCurrent, setUpdatingCurrent] = useState(false);
+    const [departmentName, setDepartmentName] = useState('');
+    const [formMode, setFormMode] = useState('add');
 
-    // Define the fetch function inside useEffect
     useEffect(() => {
-        fetchDepartments(); // Call the fetch function
-        // Optionally, return a cleanup function if needed
-        return () => {
-            // Cleanup code here if necessary
-        };
-    }, []); // Empty dependency array means this effect runs once, like componentDidMount
+        const loadDepartments = async () => {
+            if (!updatingCurrent) {
+                try {
+                    setLoading(true);
+                    const departmentsInfo = await fetchDepartments(0, 'list');
+                    setDepartments(departmentsInfo);
+                } catch (err) {
+                    if (err instanceof Error) {
+                        setError(err.message);
+                    } else {
+                        setError('An unknown error occurred');
+                    }
+                } finally {
+                    setLoading(false);
+                }
+            }
+            setUpdatingCurrent(false);
+        }
+
+        loadDepartments();
+
+    }, [updatingCurrent]); // Empty dependency array means this effect runs once, like componentDidMount
 
     const onInputChange = (event) => {
+        setDepartmentName(event.target.value);
+        currentDepartment[event.target.name] = event.target.value;
     }
 
     const onSubmitForm = (event) => {
     }
 
+    const submitIcon = () => {
+        return (
+            formMode === "add" ?
+                <span><FontAwesomeIcon icon={faPlusCircle} />&nbsp;Save New</span>
+                :
+                <span><FontAwesomeIcon icon={faFloppyDisk} />&nbsp;Update</span>
+        );
+    }
+
     const columnHelper = createColumnHelper<DepartmentModel>();
+
     const columns = [
         // Add a custom column for actions (edit/delete)
         columnHelper.display({
@@ -78,7 +94,27 @@ function Department() {
                     //setData(prevData => prevData.filter(item => item.id !== row.original.id));
                 };
 
-                const handleEdit = () => { };
+                const handleEdit = () => {
+                    const loadCurrentDepartment = async () => {
+                        setUpdatingCurrent(true);
+                        const currentDepartmentIdString: number = + row.original.idString;
+                        if (!Number.isNaN(currentDepartmentIdString)) {
+                            const fetchedDepartment = await fetchDepartments(currentDepartmentIdString, '');
+                            if (fetchedDepartment !== null
+                                && fetchedDepartment !== undefined
+                                && fetchedDepartment.length !== null
+                                && fetchedDepartment.length !== undefined
+                                && fetchedDepartment.length === 1) {
+                                currentDepartment = fetchedDepartment[0];
+                                setDepartmentName(currentDepartment.name);
+                                setFormMode(currentDepartment.formMode);
+                            }
+                        }
+                    };
+
+                    loadCurrentDepartment();
+
+                };
 
                 const actionButtons = () => {
                     const returnValue =
@@ -97,7 +133,7 @@ function Department() {
 
                 return (
                     <div>
-                        <button
+                        <button id={row.original.idString}
                             onClick={handleEdit}
                             className="btn btn-success text-white px-2 py-1 rounded text-sm"
                         >
@@ -113,11 +149,27 @@ function Department() {
             cell: (info) => info.getValue(),
         })
     ];
+
+    function handleAddButtonClick(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
+        currentDepartment.formMode = 'add';
+        currentDepartment.idString = '0';
+        currentDepartment.isAssigned = false;
+        currentDepartment.id = 0;
+        currentDepartment.name = '';
+        setDepartmentName('');
+        setFormMode('add');
+    }
+
     return (
         loading ? loadingDisplay :
             <div>
                 <form>
                     <div className="row">
+                        <div className="row">
+                            <div className="col-md-auto">
+                                <button type="button" className="btn btn-success" onClick={handleAddButtonClick}><FontAwesomeIcon icon={faPlusSquare}></FontAwesomeIcon>&nbsp;Add Department</button>
+                            </div>
+                        </div>
                         <div className="col-md-12">
                             <div className="d-flex justify-content-center">
                                 <h1 id="tableLabel" className="text-2xl font-bold mb-4">Department Data</h1>
@@ -125,7 +177,7 @@ function Department() {
                         </div>
                         <div className="col-md-12">
                             <div className="d-flex justify-content-center">
-                                <ReactTable data={departments} columns={columns} initialSort='name' />
+                                <TanstackTable data={departments} columns={columns} initialSort='name' />
                             </div>
                         </div>
                     </div>
@@ -134,13 +186,13 @@ function Department() {
                         <div className="row mb-2">
                             <div className="col-md-12">
                                 <div className="form-floating mb-1">
-                                    <input name="name" id="name" type="text" onChange={onInputChange} placeholder="Department Name" className="form-control" value={currentDepartment.name}></input>
+                                    <input name="name" id="name" type="text" onChange={onInputChange} placeholder="Department Name" className="form-control" value={departmentName}></input>
                                     <label className="form-label" htmlFor="name">Department Name</label>
                                 </div>
                             </div>
                         </div>
-                        <button className="btn btn-primary" type="button">
-                            <FontAwesomeIcon icon={faSave} onClick={onSubmitForm}></FontAwesomeIcon>&nbsp;Save
+                        <button className="btn btn-primary" type="button" onClick={onSubmitForm}>
+                            {submitIcon()}
                         </button>
                     </fieldset>
                 </form >
