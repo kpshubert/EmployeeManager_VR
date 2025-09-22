@@ -6,17 +6,9 @@ import type { DepartmentModel } from '../../Models/departmentmodel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFloppyDisk, faEdit, faTrashCan, faCircleXmark, faPlusSquare } from '@fortawesome/free-regular-svg-icons';
 import { faSpinner, faPlusCircle } from '@fortawesome/free-solid-svg-icons';
-import { fetchDepartments } from '../../Shared/Services/Department/DepartmentService';
+import { fetchDepartments, postDepartmentData, removeDepartment } from '../../Shared/Services/Department/DepartmentService';
 
 function Department() {
-
-    let currentDepartment: DepartmentModel = {
-        id: 0,
-        idString: '0',
-        name: '',
-        formMode: 'add',
-        isAssigned: false
-    };
 
     const loadingDisplay = <div>
         <div className="row mb-2">
@@ -35,8 +27,13 @@ function Department() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
     const [updatingCurrent, setUpdatingCurrent] = useState(false);
-    const [departmentName, setDepartmentName] = useState('');
-    const [formMode, setFormMode] = useState('add');
+    const [currentDepartment, setCurrentDepartment] = useState<DepartmentModel>({
+        id: 0,
+        idString: '0',
+        name: '',
+        formMode: 'add',
+        isAssigned: false
+    });
 
     useEffect(() => {
         const loadDepartments = async () => {
@@ -61,17 +58,21 @@ function Department() {
 
     }, []); // Empty dependency array means this effect runs once, like componentDidMount
 
-    const onInputChange = (event) => {
-        setDepartmentName(event.target.value);
-        currentDepartment[event.target.name] = event.target.value;
+    const onSubmitForm = (event) => {
+        postDepartmentData(currentDepartment);
     }
 
-    const onSubmitForm = (event) => {
+    function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const { name, value } = e.target;
+        setCurrentDepartment(prevDepartment => ({
+            ...prevDepartment,
+            [name]: value
+        }));
     }
 
     const submitIcon = () => {
         return (
-            formMode === "add" ?
+            currentDepartment.formMode === "add" ?
                 <span><FontAwesomeIcon icon={faPlusCircle} />&nbsp;Save New</span>
                 :
                 <span><FontAwesomeIcon icon={faFloppyDisk} />&nbsp;Update</span>
@@ -88,6 +89,10 @@ function Department() {
             enableSorting: false,
             cell: ({ row }) => {
                 const handleDelete = () => {
+                    const id: number = +row.original.idString
+                    if (!Number.isNaN(id)) {
+                        removeDepartment(id);
+                    }
                     // This function should remove the row from the data state
                     // For example, if you're using useState to manage data:
                     //setData(prevData => prevData.filter(item => item.id !== row.original.id));
@@ -104,9 +109,7 @@ function Department() {
                                 && fetchedDepartment.length !== null
                                 && fetchedDepartment.length !== undefined
                                 && fetchedDepartment.length === 1) {
-                                currentDepartment = fetchedDepartment[0];
-                                setDepartmentName(currentDepartment.name);
-                                setFormMode(currentDepartment.formMode);
+                                setCurrentDepartment(fetchedDepartment[0]);
                             }
                             setUpdatingCurrent(false);
                         }
@@ -153,13 +156,14 @@ function Department() {
     ];
 
     function handleAddButtonClick(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
-        currentDepartment.formMode = 'add';
-        currentDepartment.idString = '0';
-        currentDepartment.isAssigned = false;
-        currentDepartment.id = 0;
-        currentDepartment.name = '';
-        setDepartmentName('');
-        setFormMode('add');
+
+        setCurrentDepartment({
+            id: 0,
+            idString: '0',
+            isAssigned: false,
+            name: '',
+            formMode: 'add'
+        });
     }
 
     return (
@@ -188,7 +192,7 @@ function Department() {
                         <div className="row mb-2">
                             <div className="col-md-12">
                                 <div className="form-floating mb-1">
-                                    <input name="name" id="name" type="text" onChange={onInputChange} placeholder="Department Name" className="form-control" value={departmentName}></input>
+                                    <input name="name" id="name" type="text" onChange={handleChange} placeholder="Department Name" className="form-control" value={currentDepartment.name}></input>
                                     <label className="form-label" htmlFor="name">Department Name</label>
                                 </div>
                             </div>

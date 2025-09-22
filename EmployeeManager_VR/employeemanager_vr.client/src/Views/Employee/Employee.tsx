@@ -5,7 +5,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFloppyDisk, faEdit, faTrashCan, faPlusSquare } from '@fortawesome/free-regular-svg-icons';
 import { faSpinner, faPlusCircle } from '@fortawesome/free-solid-svg-icons';
-import { fetchEmployees } from '../../Shared/Services/Employee/EmployeeService';
+import { fetchEmployees, postEmployeeData, removeEmployee } from '../../Shared/Services/Employee/EmployeeService';
 import { fetchDepartments } from '../../Shared/Services/Department/DepartmentService';
 
 // Example usage
@@ -15,16 +15,7 @@ const EmployeeManager = () => {
     const [loading, setLoading] = useState(true);
     const [departments, setDepartments] = useState([]);
     const [updatingCurrent, setUpdatingCurrent] = useState(false);
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [email, setEmail] = useState('');
-    const [departmentIdString, setDepartmentIdString] = useState('');
-    const [formMode, setFormMode] = useState('add');
-
-    const data = [];
-
-    let currentEmployee: EmployeeModel = {
+    const [currentEmployee, setCurrentEmployee] = useState<EmployeeModel>({
         rowNum: 0,
         id: 0,
         firstName: '',
@@ -35,33 +26,41 @@ const EmployeeManager = () => {
         departmentIdString: '0',
         departmentName: '',
         formMode: 'add'
-    };
+    });
 
-    const onInputChange = (event) => {
-        if (event.target.name === "firstName") {
-            setFirstName(event.target.value);
+    function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const { name, value } = e.target;
+        setCurrentEmployee(prevEmployee => ({
+            ...prevEmployee,
+            [name]: value
+        }));
+    }
+
+    const handleDepartmentSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setCurrentEmployee(prevEmployee => ({
+            ...prevEmployee,
+            [name]: value
+        }));
+
+        if (value !== null && value !== undefined) {
+            const intValue = +value;
+            if (!Number.isNaN(intValue))
+                setCurrentEmployee(prevEmployee => ({
+                    ...prevEmployee,
+                    [name]: value,
+                    ["departmentId"]: intValue
+                }));
         }
-        if (event.target.name === "lastName") {
-            setLastName(event.target.value);
-        }
-        if (event.target.name === "email") {
-            setEmail(event.target.value);
-        }
-        if (event.target.name === "phone") {
-            setPhone(event.target.value);
-        }
-        if (event.target.name === "departmentidString") {
-            setDepartmentIdString(event.target.value);
-        }
-        currentEmployee[event.target.name] = event.target.value;
     }
 
     const onSubmitForm = (event) => {
+        postEmployeeData(currentEmployee);
     }
 
     const submitIcon = () => {
         return (
-            formMode === "add" ?
+            currentEmployee.formMode === "add" ?
                 <span><FontAwesomeIcon icon={faPlusCircle} />&nbsp;Save New</span>
                 :
                 <span><FontAwesomeIcon icon={faFloppyDisk} />&nbsp;Update</span>
@@ -84,7 +83,7 @@ const EmployeeManager = () => {
     const optionList = renderSelectControlOptions();
 
     const selectControl =
-        <select name="departmentIdString" id="departmentIdString" onChange={onInputChange} className="form-select" value={departmentIdString}>
+        <select name="departmentIdString" id="departmentIdString" onChange={handleDepartmentSelectChange} className="form-select" value={currentEmployee.departmentIdString}>
             <option key={-1} value=''>--please select--</option>
             {optionList}
         </select>;
@@ -99,6 +98,7 @@ const EmployeeManager = () => {
             enableSorting: false,
             cell: ({ row }) => {
                 const handleDelete = () => {
+                    removeEmployee(row.original.id);
                     // This function should remove the row from the data state
                     // For example, if you're using useState to manage data:
                     //setData(prevData => prevData.filter(item => item.id !== row.original.id));
@@ -114,16 +114,12 @@ const EmployeeManager = () => {
                                 && fetchedEmployee.length !== null
                                 && fetchedEmployee.length !== undefined
                                 && fetchedEmployee.length === 1) {
-                                currentEmployee = fetchedEmployee[0];
-                                setFirstName(currentEmployee.firstName);
-                                setLastName(currentEmployee.lastName);
-                                setEmail(currentEmployee.email);
-                                setPhone(currentEmployee.phone);
-                                setDepartmentIdString(currentEmployee.departmentIdString);
-                                setFormMode(currentEmployee.formMode);
+                                setCurrentEmployee(fetchedEmployee[0]);
                             }
                             setUpdatingCurrent(false);
                         }
+
+
                     };
 
                     loadCurrentEmployee();
@@ -217,20 +213,19 @@ const EmployeeManager = () => {
     }, []); // Empty dependency array means this effect runs once, like componentDidMount
 
     function handleAddButtonClick(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
-        currentEmployee.formMode = 'add';
-        currentEmployee.idString = '0';
-        currentEmployee.id = 0;
-        currentEmployee.firstName = '';
-        currentEmployee.lastName = '';
-        currentEmployee.email = '';
-        currentEmployee.phone = '';
-        currentEmployee.departmentIdString = '';
-        setFirstName('');
-        setLastName('');
-        setEmail('');
-        setPhone('');
-        setDepartmentIdString('0');
-        setFormMode('add');
+        setCurrentEmployee({
+            id: 0,
+            idString: '0',
+            firstName: '',
+            lastName: '',
+            email: '',
+            phone: '',
+            departmentId: 0,
+            departmentIdString: '',
+            departmentName: '',
+            formMode: 'add'
+        });
+
     }
 
     return (
@@ -250,13 +245,13 @@ const EmployeeManager = () => {
                     <div className="row mb-2">
                         <div className="col-md-6">
                             <div className="form-floating mb-1">
-                                <input name="firstName" id="firstame" type="text" onChange={onInputChange} placeholder="First Name" className="form-control" value={firstName}></input>
+                                <input name="firstName" id="firstame" type="text" onChange={handleChange} placeholder="First Name" className="form-control" value={currentEmployee.firstName}></input>
                                 <label className="form-label" htmlFor="firstName">First Name</label>
                             </div>
                         </div>
                         <div className="col-md-6">
                             <div className="form-floating mb-1">
-                                <input name="lastName" id="lastName" type="text" onChange={onInputChange} placeholder="Last Name" className="form-control" value={lastName}></input>
+                                <input name="lastName" id="lastName" type="text" onChange={handleChange} placeholder="Last Name" className="form-control" value={currentEmployee.lastName}></input>
                                 <label className="form-label" htmlFor="lastName">Last Name</label>
                             </div>
                         </div>
@@ -264,13 +259,13 @@ const EmployeeManager = () => {
                     <div className="row mb-2">
                         <div className="col-md-6">
                             <div className="form-floating mb-1">
-                                <input name="phone" id="phone" type="text" onChange={onInputChange} placeholder="Phone Number" className="form-control" value={phone}></input>
+                                <input name="phone" id="phone" type="text" onChange={handleChange} placeholder="Phone Number" className="form-control" value={currentEmployee.phone}></input>
                                 <label className="form-label" htmlFor="phone">Phone Number</label>
                             </div>
                         </div>
                         <div className="col-md-6">
                             <div className="form-floating mb-1">
-                                <input name="email" id="email" type="text" onChange={onInputChange} placeholder="Email" className="form-control" value={email}></input>
+                                <input name="email" id="email" type="text" onChange={handleChange} placeholder="Email" className="form-control" value={currentEmployee.email}></input>
                                 <label className="form-label" htmlFor="email">Email</label>
                             </div>
                         </div>
