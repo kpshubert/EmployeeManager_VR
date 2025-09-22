@@ -1,3 +1,5 @@
+import type { EmployeeModel } from "../../../Models/employeemodel";
+
 export async function fetchEmployees(id: number, mode: string = '') {
     try {
         const response = await fetch(`/employee?id=${id}&mode=${mode}`);
@@ -8,5 +10,35 @@ export async function fetchEmployees(id: number, mode: string = '') {
         return data;
     } catch (error) {
         return error.message;
+    }
+}
+
+export async function postEmployeeData(employeeToUpdate: EmployeeModel) {
+    const requestOptions = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(employeeToUpdate)
+    };
+    const response = await fetch('/employee', requestOptions);
+    const data = await response.json();
+    console.log('Data: ');
+    console.log(data);
+}
+
+//Delete data
+export async function removeEmployee(id: number) {
+    if (window.confirm("Are you sure?")) {
+
+        fetch(`/employee?id=${id}`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'content-Type': 'application/json'
+                }
+            })
+
+            .then(console.log("Deleted"))
+            .catch(err => console.log(err));
     }
 }
