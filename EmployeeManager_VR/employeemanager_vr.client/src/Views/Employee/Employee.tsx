@@ -1,5 +1,5 @@
 import TanstackTable from "../../Shared/Components/TanstackTable";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { EmployeeModel } from '../../Models/employeemodel'
 import { createColumnHelper } from '@tanstack/react-table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -29,7 +29,9 @@ const EmployeeManager = () => {
         formMode: 'add'
     });
 
-    const  handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const firstNameInputRef = useRef<HTMLInputElement | null>(null);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setCurrentEmployee(prevEmployee => ({
             ...prevEmployee,
@@ -132,9 +134,8 @@ const EmployeeManager = () => {
                                 setCurrentEmployee(fetchedEmployee[0]);
                             }
                             setUpdatingCurrent(false);
+                            firstNameInputRef.current?.focus();
                         }
-
-
                     };
 
                     loadCurrentEmployee();
@@ -221,6 +222,9 @@ const EmployeeManager = () => {
                     setLoading(false);
                 }
             }
+            const firstNameInput = document.getElementById("firstName") as HTMLInputElement;
+            firstNameInputRef.current = firstNameInput;
+            firstNameInputRef.current?.focus();
         }
 
         loadEmployees();
@@ -240,7 +244,7 @@ const EmployeeManager = () => {
             departmentName: '',
             formMode: 'add'
         });
-
+        firstNameInputRef.current?.focus();
     }
 
     const statusMessageDiv = () => {
@@ -282,7 +286,7 @@ const EmployeeManager = () => {
                         <div className="row mb-2">
                             <div className="col-md-6">
                                 <div className="form-floating mb-1">
-                                    <input name="firstName" id="firstame" type="text" onChange={handleChange} placeholder="First Name" className="form-control" value={currentEmployee.firstName}></input>
+                                    <input name="firstName" id="firstName" type="text" onChange={handleChange} placeholder="First Name" className="form-control" value={currentEmployee.firstName}></input>
                                     <label className="form-label" htmlFor="firstName">First Name</label>
                                 </div>
                             </div>
