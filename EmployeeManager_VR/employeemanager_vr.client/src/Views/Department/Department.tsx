@@ -1,5 +1,5 @@
 import TanstackTable from "../../Shared/Components/TanstackTable";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import './Department.css';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { DepartmentModel } from '../../Models/departmentmodel';
@@ -37,6 +37,8 @@ function Department() {
         isAssigned: false
     });
 
+    const departmentNameInputRef = useRef<HTMLInputElement | null>(null);
+
     useEffect(() => {
         const loadDepartments = async () => {
             if (!updatingCurrent) {
@@ -54,6 +56,9 @@ function Department() {
                     setLoading(false);
                 }
             }
+            const departmentNameInput = document.getElementById("name") as HTMLInputElement;
+            departmentNameInputRef.current = departmentNameInput;
+            departmentNameInputRef.current?.focus();
         }
 
         loadDepartments();
@@ -106,7 +111,7 @@ function Department() {
                     const id: number = +row.original.idString
                     if (!Number.isNaN(id)) {
                         await removeDepartment(id);
-                        showStatusMessage({MessageText: 'Department deleted', TimeoutIn: 5});
+                        showStatusMessage({ MessageText: 'Department deleted', TimeoutIn: 5 });
                     }
                     // This function should remove the row from the data state
                     // For example, if you're using useState to manage data:
@@ -131,7 +136,7 @@ function Department() {
                     };
 
                     loadCurrentDepartment();
-
+                    departmentNameInputRef.current?.focus();
                 };
 
                 const actionButtons = () => {
@@ -179,6 +184,7 @@ function Department() {
             name: '',
             formMode: 'add'
         });
+        departmentNameInputRef.current?.focus();
     }
 
     const statusMessageDiv = () => {
