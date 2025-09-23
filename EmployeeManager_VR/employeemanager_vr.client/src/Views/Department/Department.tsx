@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import './Department.css';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { DepartmentModel } from '../../Models/departmentmodel';
+import type { StatusMessageParameters } from '../../Models/StatusMessageParameters';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFloppyDisk, faEdit, faTrashCan, faCircleXmark, faPlusSquare } from '@fortawesome/free-regular-svg-icons';
 import { faSpinner, faPlusCircle } from '@fortawesome/free-solid-svg-icons';
@@ -27,6 +28,7 @@ function Department() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
     const [updatingCurrent, setUpdatingCurrent] = useState(false);
+    const [statusMessage, setStatusMessage] = useState<string>('');
     const [currentDepartment, setCurrentDepartment] = useState<DepartmentModel>({
         id: 0,
         idString: '0',
@@ -55,14 +57,14 @@ function Department() {
         }
 
         loadDepartments();
-
     }, []); // Empty dependency array means this effect runs once, like componentDidMount
 
-    const onSubmitForm = (event) => {
-        postDepartmentData(currentDepartment);
+    const onSubmitForm = async (event) => {
+        await postDepartmentData(currentDepartment);
+        showStatusMessage({ MessageText: `Department ${currentDepartment.formMode} complete`, TimeoutIn: 5 });
     }
 
-    function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setCurrentDepartment(prevDepartment => ({
             ...prevDepartment,
@@ -79,6 +81,18 @@ function Department() {
         );
     }
 
+    const showStatusMessage = (statusMessageParameters: StatusMessageParameters) => {
+        let timeoutInMS: number = 3000;
+
+        if (typeof statusMessageParameters.TimeoutIn === "number") {
+            timeoutInMS = statusMessageParameters.TimeoutIn * 1000;
+        }
+        setStatusMessage(statusMessageParameters.MessageText);
+        setTimeout(() => {
+            setStatusMessage('');
+        }, timeoutInMS);
+    }
+
     const columnHelper = createColumnHelper<DepartmentModel>();
 
     const columns = [
@@ -88,10 +102,11 @@ function Department() {
             header: 'Actions',
             enableSorting: false,
             cell: ({ row }) => {
-                const handleDelete = () => {
+                const handleDelete = async () => {
                     const id: number = +row.original.idString
                     if (!Number.isNaN(id)) {
-                        removeDepartment(id);
+                        await removeDepartment(id);
+                        showStatusMessage({MessageText: 'Department deleted', TimeoutIn: 5});
                     }
                     // This function should remove the row from the data state
                     // For example, if you're using useState to manage data:
@@ -166,9 +181,30 @@ function Department() {
         });
     }
 
+    const statusMessageDiv = () => {
+        let returnValue = <></>;
+        if (statusMessage.length > 0) {
+            returnValue =
+                <div className="sticky-top">
+                    <div className="row md-3">
+                        <div className="col-md-3"></div>
+                        <div className="col-md-6">
+                            <div className="d-flex justify-content-center alert alert-info border border-primary ronded rounded-3 fw-bold">{statusMessage}</div>
+                        </div>
+                        <div className="col-md-3"></div>
+                    </div>
+                </div>;
+        }
+
+        return returnValue;
+    }
+
+    const statusMessageDivOutput = statusMessageDiv();
+
     return (
         loading ? loadingDisplay :
             <div>
+                {statusMessageDivOutput}
                 <form>
                     <div className="row">
                         <div className="row">

@@ -15,6 +15,7 @@ const EmployeeManager = () => {
     const [loading, setLoading] = useState(true);
     const [departments, setDepartments] = useState([]);
     const [updatingCurrent, setUpdatingCurrent] = useState(false);
+    const [statusMessage, setStatusMessage] = useState<string>('');
     const [currentEmployee, setCurrentEmployee] = useState<EmployeeModel>({
         rowNum: 0,
         id: 0,
@@ -28,7 +29,7 @@ const EmployeeManager = () => {
         formMode: 'add'
     });
 
-    function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const  handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setCurrentEmployee(prevEmployee => ({
             ...prevEmployee,
@@ -54,8 +55,9 @@ const EmployeeManager = () => {
         }
     }
 
-    const onSubmitForm = (event) => {
-        postEmployeeData(currentEmployee);
+    const onSubmitForm = async (event) => {
+        await postEmployeeData(currentEmployee);
+        showStatusMessage({ MessageText: `Employee ${currentEmployee.formMode} complete`, TimeoutIn: 5 });
     }
 
     const submitIcon = () => {
@@ -88,6 +90,18 @@ const EmployeeManager = () => {
             {optionList}
         </select>;
 
+    const showStatusMessage = (statusMessageParameters: StatusMessageParameters) => {
+        let timeoutInMS: number = 3000;
+
+        if (typeof statusMessageParameters.TimeoutIn === "number") {
+            timeoutInMS = statusMessageParameters.TimeoutIn * 1000;
+        }
+        setStatusMessage(statusMessageParameters.MessageText);
+        setTimeout(() => {
+            setStatusMessage('');
+        }, timeoutInMS);
+    }
+
     const columnHelper = createColumnHelper<EmployeeModel>();
 
     const columns = [
@@ -97,8 +111,9 @@ const EmployeeManager = () => {
             header: 'Actions',
             enableSorting: false,
             cell: ({ row }) => {
-                const handleDelete = () => {
-                    removeEmployee(row.original.id);
+                const handleDelete = async () => {
+                    await removeEmployee(row.original.id);
+                    showStatusMessage({ MessageText: 'Employee deleted', TimeoutIn: 5 });
                     // This function should remove the row from the data state
                     // For example, if you're using useState to manage data:
                     //setData(prevData => prevData.filter(item => item.id !== row.original.id));
@@ -212,7 +227,7 @@ const EmployeeManager = () => {
 
     }, []); // Empty dependency array means this effect runs once, like componentDidMount
 
-    function handleAddButtonClick(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
+    const handleAddButtonClick = (event: MouseEvent<HTMLButtonElement, MouseEvent>): void => {
         setCurrentEmployee({
             id: 0,
             idString: '0',
@@ -228,61 +243,84 @@ const EmployeeManager = () => {
 
     }
 
+    const statusMessageDiv = () => {
+        let returnValue = <></>;
+        if (statusMessage.length > 0) {
+            returnValue =
+                <div className="sticky-top">
+                    <div className="row md-3">
+                        <div className="col-md-3"></div>
+                        <div className="col-md-6">
+                            <div className="d-flex justify-content-center alert alert-info border border-primary ronded rounded-3 fw-bold">{statusMessage}</div>
+                        </div>
+                        <div className="col-md-3"></div>
+                    </div>
+                </div>;
+        }
+
+        return returnValue;
+    }
+
+    const statusMessageDivOutput = statusMessageDiv();
+
     return (
         loading ? loadingDisplay :
-            <form>
-                <div className="row">
-                    <div className="col-md-auto">
-                        <button type="button" className="btn btn-success" onClick={handleAddButtonClick}><FontAwesomeIcon icon={faPlusSquare}></FontAwesomeIcon>&nbsp;Add Employee</button>
-                    </div>
-                </div>
-                <div className="p-4">
-                    <h1 className="text-2xl font-bold mb-4">Employee Data</h1>
-                    <TanstackTable data={employees} columns={columns} initialSort='lastName' />
-                </div>
-                <fieldset className="border border-primary rounded rounded-3 p-2">
-                    <legend>Add/Edit Employee</legend>
-                    <div className="row mb-2">
-                        <div className="col-md-6">
-                            <div className="form-floating mb-1">
-                                <input name="firstName" id="firstame" type="text" onChange={handleChange} placeholder="First Name" className="form-control" value={currentEmployee.firstName}></input>
-                                <label className="form-label" htmlFor="firstName">First Name</label>
-                            </div>
-                        </div>
-                        <div className="col-md-6">
-                            <div className="form-floating mb-1">
-                                <input name="lastName" id="lastName" type="text" onChange={handleChange} placeholder="Last Name" className="form-control" value={currentEmployee.lastName}></input>
-                                <label className="form-label" htmlFor="lastName">Last Name</label>
-                            </div>
+            <div>
+                {statusMessageDivOutput}
+                <form>
+                    <div className="row">
+                        <div className="col-md-auto">
+                            <button type="button" className="btn btn-success" onClick={handleAddButtonClick}><FontAwesomeIcon icon={faPlusSquare}></FontAwesomeIcon>&nbsp;Add Employee</button>
                         </div>
                     </div>
-                    <div className="row mb-2">
-                        <div className="col-md-6">
-                            <div className="form-floating mb-1">
-                                <input name="phone" id="phone" type="text" onChange={handleChange} placeholder="Phone Number" className="form-control" value={currentEmployee.phone}></input>
-                                <label className="form-label" htmlFor="phone">Phone Number</label>
-                            </div>
-                        </div>
-                        <div className="col-md-6">
-                            <div className="form-floating mb-1">
-                                <input name="email" id="email" type="text" onChange={handleChange} placeholder="Email" className="form-control" value={currentEmployee.email}></input>
-                                <label className="form-label" htmlFor="email">Email</label>
-                            </div>
-                        </div>
+                    <div className="p-4">
+                        <h1 className="text-2xl font-bold mb-4">Employee Data</h1>
+                        <TanstackTable data={employees} columns={columns} initialSort='lastName' />
                     </div>
-                    <div className="row mb-2">
-                        <div className="col-md-6">
-                            <div className="form-floating mb-1">
-                                {selectControl}
-                                <label className="form-label" htmlFor="name">Department Name</label>
+                    <fieldset className="border border-primary rounded rounded-3 p-2">
+                        <legend>Add/Edit Employee</legend>
+                        <div className="row mb-2">
+                            <div className="col-md-6">
+                                <div className="form-floating mb-1">
+                                    <input name="firstName" id="firstame" type="text" onChange={handleChange} placeholder="First Name" className="form-control" value={currentEmployee.firstName}></input>
+                                    <label className="form-label" htmlFor="firstName">First Name</label>
+                                </div>
+                            </div>
+                            <div className="col-md-6">
+                                <div className="form-floating mb-1">
+                                    <input name="lastName" id="lastName" type="text" onChange={handleChange} placeholder="Last Name" className="form-control" value={currentEmployee.lastName}></input>
+                                    <label className="form-label" htmlFor="lastName">Last Name</label>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <button className="btn btn-primary" type="button" onClick={onSubmitForm}>
-                        {submitIcon()}
-                    </button>
-                </fieldset>
-            </form >
+                        <div className="row mb-2">
+                            <div className="col-md-6">
+                                <div className="form-floating mb-1">
+                                    <input name="phone" id="phone" type="text" onChange={handleChange} placeholder="Phone Number" className="form-control" value={currentEmployee.phone}></input>
+                                    <label className="form-label" htmlFor="phone">Phone Number</label>
+                                </div>
+                            </div>
+                            <div className="col-md-6">
+                                <div className="form-floating mb-1">
+                                    <input name="email" id="email" type="text" onChange={handleChange} placeholder="Email" className="form-control" value={currentEmployee.email}></input>
+                                    <label className="form-label" htmlFor="email">Email</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="row mb-2">
+                            <div className="col-md-6">
+                                <div className="form-floating mb-1">
+                                    {selectControl}
+                                    <label className="form-label" htmlFor="name">Department Name</label>
+                                </div>
+                            </div>
+                        </div>
+                        <button className="btn btn-primary" type="button" onClick={onSubmitForm}>
+                            {submitIcon()}
+                        </button>
+                    </fieldset>
+                </form >
+            </div >
     );
 };
 
