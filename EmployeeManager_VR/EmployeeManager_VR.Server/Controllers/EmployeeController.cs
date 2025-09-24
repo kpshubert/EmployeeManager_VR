@@ -116,7 +116,11 @@ namespace EmployeeManager_VA.Server.Controllers
 
                         if (updateResult > 0)
                         {
-                            var updatedAtAction = new AcceptedAtActionResult("post", "employee", new { id = rowToUpdate.Id }, rowToUpdate);
+                            var returnEmployeeViewModel = new EmployeeViewModel();
+                            var usedDepartmentName = await employeeManagerDbContext.TEmDepartments.Where(department => department.Id == rowToUpdate.DepartmentId).Select(department => department.Name).FirstOrDefaultAsync();
+                            Utilities.CopySharedPropertyValues<TEmEmployee, EmployeeViewModel>(rowToUpdate, returnEmployeeViewModel);
+                            returnEmployeeViewModel.DepartmentName = usedDepartmentName ?? "";
+                            var updatedAtAction = new AcceptedAtActionResult("post", "employee", new { id = rowToUpdate.Id }, returnEmployeeViewModel);
                             actionResult = updatedAtAction;
                         }
                         else
