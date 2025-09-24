@@ -23,6 +23,7 @@ export async function postEmployeeData(employeeToUpdate: EmployeeModel) {
     const data = await response.json();
     console.log('Data: ');
     console.log(data);
+    return data;
 }
 
 //Delete data

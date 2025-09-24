@@ -24,7 +24,7 @@ function Department() {
         </div>
     </div>;
 
-    const [departments, setDepartments] = useState(null);
+    const [departments, setDepartments] = useState<DepartmentModel[] | null>(null);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
     const [updatingCurrent, setUpdatingCurrent] = useState(false);
@@ -65,8 +65,30 @@ function Department() {
     }, []); // Empty dependency array means this effect runs once, like componentDidMount
 
     const onSubmitForm = async (event) => {
-        await postDepartmentData(currentDepartment);
+        const returnValue = await postDepartmentData(currentDepartment);
         showStatusMessage({ MessageText: `Department ${currentDepartment.formMode} complete`, TimeoutIn: 5 });
+        if (currentDepartment.formMode === "add") {
+            const newDepartment: DepartmentModel = {
+                id: returnValue.id,
+                idString: returnValue.id.toString(),
+                name: returnValue.name,
+                isAssigned: false,
+                formMode: 'edit'
+            };
+            setDepartments(prevDepartments => [...prevDepartments, newDepartment]);
+        } else {
+            const returnedId = returnValue.id;
+            const changedName: string = returnValue.name;
+            if (departments !== null) {
+                setDepartments(prevDepartments =>
+                    prevDepartments.map(obj =>
+                        obj.id === returnedId
+                            ? { ...obj, name: changedName } // Update the name, keep other properties
+                            : obj
+                    )
+                );
+            }
+        }
     }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,10 +134,8 @@ function Department() {
                     if (!Number.isNaN(id)) {
                         await removeDepartment(id);
                         showStatusMessage({ MessageText: 'Department deleted', TimeoutIn: 5 });
+                        setDepartments(prevDepartments => prevDepartments.filter(item => item.id !== row.original.id));
                     }
-                    // This function should remove the row from the data state
-                    // For example, if you're using useState to manage data:
-                    //setData(prevData => prevData.filter(item => item.id !== row.original.id));
                 };
 
                 const handleEdit = () => {
