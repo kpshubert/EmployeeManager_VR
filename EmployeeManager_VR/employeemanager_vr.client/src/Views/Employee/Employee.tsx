@@ -10,7 +10,7 @@ import { fetchDepartments } from '../../Shared/Services/Department/DepartmentSer
 
 // Example usage
 const EmployeeManager = () => {
-    const [employees, setEmployees] = useState([]);
+    const [employees, setEmployees] = useState<EmployeeModel[] | null>([]);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
     const [departments, setDepartments] = useState([]);
@@ -58,8 +58,43 @@ const EmployeeManager = () => {
     }
 
     const onSubmitForm = async (event) => {
-        await postEmployeeData(currentEmployee);
+        const returnValue = await postEmployeeData(currentEmployee);
         showStatusMessage({ MessageText: `Employee ${currentEmployee.formMode} complete`, TimeoutIn: 5 });
+        if (currentEmployee.formMode === "add") {
+            const newEmployee: EmployeeModel = {
+                id: returnValue.id,
+                idString: returnValue.id.toString(),
+                firstName: returnValue.firstName,
+                lastName: returnValue.lastName,
+                email: returnValue.email,
+                phone: returnValue.phone,
+                departmentId: returnValue.departmentId,
+                departmentIdString: returnValue.departmentIdString,
+                departmentName: returnValue.departmentName,
+                formMode: 'edit'
+            };
+            setEmployees(prevEmployees => [...prevEmployees, newEmployee]);
+        } else {
+            const returnedId = returnValue.id;
+            const changedFirstName: string = returnValue.firstName;
+            if (employees !== null) {
+                setEmployees(prevEmployees =>
+                    prevEmployees.map(obj =>
+                        obj.id === returnedId
+                            ? {
+                                ...obj,
+                                firstName: returnValue.firstName,
+                                lastName: returnValue.lastName,
+                                email: returnValue.email,
+                                phone: returnValue.phone,
+                                departmentName: returnValue.departmentName
+
+                            } // Update the name, keep other properties
+                            : obj
+                    )
+                );
+            }
+        }
     }
 
     const submitIcon = () => {
@@ -116,9 +151,7 @@ const EmployeeManager = () => {
                 const handleDelete = async () => {
                     await removeEmployee(row.original.id);
                     showStatusMessage({ MessageText: 'Employee deleted', TimeoutIn: 5 });
-                    // This function should remove the row from the data state
-                    // For example, if you're using useState to manage data:
-                    //setData(prevData => prevData.filter(item => item.id !== row.original.id));
+                    setEmployees(prevEmployees => prevEmployees.filter(item => item.id !== row.original.id));
                 };
 
                 const handleEdit = () => {

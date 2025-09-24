@@ -21,8 +21,7 @@ export async function postDepartmentData(departmentToUpdate : DepartmentModel) {
     };
     const response = await fetch('/department', requestOptions);
     const data = await response.json();
-    console.log('Data: ');
-    console.log(data);
+    return data;
 }
 
 
