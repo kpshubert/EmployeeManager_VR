@@ -1,11 +1,10 @@
 ﻿using EmployeeManager_VR.Server.Data;
 using EmployeeManager_VR.Server.Models;
 using EmployeeManager_VR.Server.ViewModels;
-using EmployeeManager_VR.Server.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace EmployeeManager_VA.Server.Controllers
+namespace EmployeeManager_VR.Server.Controllers
 {
     [ApiController]
     [Route("[Controller]")]
@@ -38,7 +37,7 @@ namespace EmployeeManager_VA.Server.Controllers
                 {
                     var newDepartmentViewModel = new DepartmentViewModel();
 
-                    Utilities.CopySharedPropertyValues<TEmDepartment, DepartmentViewModel>(department, newDepartmentViewModel);
+                    Utilities.Utilities.CopySharedPropertyValues<TEmDepartment, DepartmentViewModel>(department, newDepartmentViewModel);
 
                     if (department.Name != null)
                     {
@@ -82,19 +81,29 @@ namespace EmployeeManager_VA.Server.Controllers
                 {
                     var newTEmDepartment = new TEmDepartment();
 
-                    Utilities.CopySharedPropertyValues<DepartmentViewModel, TEmDepartment>(departmentViewModel, newTEmDepartment);
+                    Utilities.Utilities.CopySharedPropertyValues<DepartmentViewModel, TEmDepartment>(departmentViewModel, newTEmDepartment);
+
+                    int? addResult = null;
+                    string addResultError = "Department Add Failed.";
 
                     employeeManagerDbContext.TEmDepartments.Add(newTEmDepartment);
-                    var addResult = await employeeManagerDbContext.SaveChangesAsync(true);
+                    try
+                    {
+                        addResult = await employeeManagerDbContext.SaveChangesAsync(true);
+                    }
+                    catch (Exception e)
+                    {
+                        addResultError = e.Message;
+                    }
 
-                    if (addResult > 0)
+                    if (addResult != null && addResult > 0)
                     {
                         var createdAtAction = new CreatedAtActionResult("post", "department", new { id = newTEmDepartment.Id }, newTEmDepartment);
                         actionResult = createdAtAction;
                     }
                     else
                     {
-                        actionResult = BadRequest("Could not be added.");
+                        actionResult = BadRequest(addResultError);
                     }
                 }
                 else
@@ -103,20 +112,29 @@ namespace EmployeeManager_VA.Server.Controllers
 
                     if (rowToUpdate != null)
                     {
-                        Utilities.CopySharedPropertyValues<DepartmentViewModel, TEmDepartment>(departmentViewModel, rowToUpdate);
+                        var addResultError = "Department Update Failed.";
+                        int? updateResult = null;
+
+                        Utilities.Utilities.CopySharedPropertyValues<DepartmentViewModel, TEmDepartment>(departmentViewModel, rowToUpdate);
 
                         employeeManagerDbContext.TEmDepartments.Update(rowToUpdate);
+                        try
+                        {
+                            updateResult = await employeeManagerDbContext.SaveChangesAsync();
+                        }
+                        catch (Exception e)
+                        {
+                            addResultError = e.Message;
+                        }
 
-                        var updateResult = await employeeManagerDbContext.SaveChangesAsync();
-
-                        if (updateResult > 0)
+                        if (updateResult != null && updateResult > 0)
                         {
                             var updatedAtAction = new AcceptedAtActionResult("post", "department", new { id = rowToUpdate.Id }, rowToUpdate);
                             actionResult = updatedAtAction;
                         }
                         else
                         {
-                            actionResult = BadRequest("Department Update Failed.");
+                            actionResult = BadRequest(addResultError);
                         }
                     }
                     else
@@ -131,42 +149,63 @@ namespace EmployeeManager_VA.Server.Controllers
         [HttpDelete(Name = "DeleteDepartment")]
         public async Task<IActionResult> Delete(int? Id)
         {
-            IActionResult returnValue;
+            IActionResult? returnValue = null;
+            var deleteErrorMessage = "Department Delete Failed.";
 
             if (Id == null)
             {
-                returnValue = BadRequest("Must specify an ID.");
+                deleteErrorMessage = "Must specify a Department ID.";
             }
             else
             {
-                var departmentRow = await employeeManagerDbContext.TEmDepartments.Where(e => e.Id == Id).FirstOrDefaultAsync();
+                TEmDepartment? departmentRow = null;
+
+                try
+                {
+                    departmentRow = await employeeManagerDbContext.TEmDepartments.Where(e => e.Id == Id).FirstOrDefaultAsync();
+                }
+                catch (Exception e)
+                {
+                    deleteErrorMessage = e.Message;
+                }
 
                 if (departmentRow != null)
                 {
                     if (departmentRow.TEmEmployees.Count == 0)
                     {
-                        employeeManagerDbContext.TEmDepartments.Remove(departmentRow);
-                        var deleteResult = await employeeManagerDbContext.SaveChangesAsync();
+                        int? deleteResult = null;
+                        deleteErrorMessage = "Department Delete Failed.";
 
-                        if (deleteResult > 0)
+                        employeeManagerDbContext.TEmDepartments.Remove(departmentRow);
+
+                        try
+                        {
+                            deleteResult = await employeeManagerDbContext.SaveChangesAsync();
+                        }
+                        catch (Exception e)
+                        {
+                            deleteErrorMessage = e.Message;
+                        }
+
+                        if (deleteResult != null && deleteResult > 0)
                         {
                             returnValue = Ok();
-                        }
-                        else
-                        {
-                            returnValue = NotFound("Department Delete Failed.");
                         }
                     }
                     else
                     {
-                        returnValue = BadRequest("Department has employees assigned");
+                        deleteErrorMessage = "Department has employees assigned";
                     }
+
                 }
                 else
                 {
-                    returnValue = NotFound("Department Not Found.");
+                    returnValue = NotFound(deleteErrorMessage);
                 }
             }
+
+            returnValue ??= BadRequest(deleteErrorMessage);
+
             return returnValue;
         }
     }

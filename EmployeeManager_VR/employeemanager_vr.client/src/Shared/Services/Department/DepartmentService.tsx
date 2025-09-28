@@ -13,15 +13,14 @@ export async function fetchDepartments(id: number, mode: string = '') {
     }
 }
 
-export async function postDepartmentData(departmentToUpdate : DepartmentModel) {
+export async function postDepartmentData(departmentToUpdate: DepartmentModel) {
     const requestOptions = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(departmentToUpdate)
     };
     const response = await fetch('/department', requestOptions);
-    const data = await response.json();
-    return data;
+    return response;
 }
 
 
@@ -29,7 +28,7 @@ export async function postDepartmentData(departmentToUpdate : DepartmentModel) {
 export async function removeDepartment(id: number) {
     if (window.confirm("Are you sure?")) {
 
-        fetch(`/department?id=${id}`,
+        await fetch(`/department?id=${id}`,
             {
                 method: 'DELETE',
                 headers: {
@@ -37,8 +36,10 @@ export async function removeDepartment(id: number) {
                     'content-Type': 'application/json'
                 }
             })
-
-            .then(console.log("Deleted"))
+            .then(response => {
+                console.log("Deleted");
+                return response;
+            })
             .catch(err => console.log(err));
     }
 };

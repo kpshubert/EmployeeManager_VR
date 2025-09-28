@@ -58,42 +58,45 @@ const EmployeeManager = () => {
     }
 
     const onSubmitForm = async (event) => {
-        const returnValue = await postEmployeeData(currentEmployee);
-        showStatusMessage({ MessageText: `Employee ${currentEmployee.formMode} complete`, TimeoutIn: 5 });
-        if (currentEmployee.formMode === "add") {
-            const newEmployee: EmployeeModel = {
-                id: returnValue.id,
-                idString: returnValue.id.toString(),
-                firstName: returnValue.firstName,
-                lastName: returnValue.lastName,
-                email: returnValue.email,
-                phone: returnValue.phone,
-                departmentId: returnValue.departmentId,
-                departmentIdString: returnValue.departmentIdString,
-                departmentName: returnValue.departmentName,
-                formMode: 'edit'
-            };
-            setEmployees(prevEmployees => [...prevEmployees, newEmployee]);
-        } else {
-            const returnedId = returnValue.id;
-            const changedFirstName: string = returnValue.firstName;
-            if (employees !== null) {
-                setEmployees(prevEmployees =>
-                    prevEmployees.map(obj =>
-                        obj.id === returnedId
-                            ? {
-                                ...obj,
-                                firstName: returnValue.firstName,
-                                lastName: returnValue.lastName,
-                                email: returnValue.email,
-                                phone: returnValue.phone,
-                                departmentName: returnValue.departmentName
-
-                            } // Update the name, keep other properties
-                            : obj
-                    )
-                );
+        const response = await postEmployeeData(currentEmployee);
+        const returnValue = await response.json();
+        if (response.ok) {
+            showStatusMessage({ MessageText: `Employee ${currentEmployee.formMode} complete`, TimeoutIn: 5 });
+            if (currentEmployee.formMode === "add") {
+                const newEmployee: EmployeeModel = {
+                    id: returnValue.id,
+                    idString: returnValue.id.toString(),
+                    firstName: returnValue.firstName,
+                    lastName: returnValue.lastName,
+                    email: returnValue.email,
+                    phone: returnValue.phone,
+                    departmentId: returnValue.departmentId,
+                    departmentIdString: returnValue.departmentIdString,
+                    departmentName: returnValue.departmentName,
+                    formMode: 'edit'
+                };
+                setEmployees(prevEmployees => [...prevEmployees, newEmployee]);
+            } else {
+                const returnedId = returnValue.id;
+                if (employees !== null) {
+                    setEmployees(prevEmployees =>
+                        prevEmployees.map(obj =>
+                            obj.id === returnedId
+                                ? {
+                                    ...obj,
+                                    firstName: returnValue.firstName,
+                                    lastName: returnValue.lastName,
+                                    email: returnValue.email,
+                                    phone: returnValue.phone,
+                                    departmentName: returnValue.departmentName
+                                } // Update the name, keep other properties
+                                : obj
+                        )
+                    );
+                }
             }
+        } else {
+            showStatusMessage({ MessageText: `Update failed with error ${response.statusText}`, TimeoutIn: 5 });
         }
     }
 
