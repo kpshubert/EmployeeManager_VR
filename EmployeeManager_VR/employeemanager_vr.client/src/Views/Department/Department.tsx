@@ -65,29 +65,34 @@ function Department() {
     }, []); // Empty dependency array means this effect runs once, like componentDidMount
 
     const onSubmitForm = async (event) => {
-        const returnValue = await postDepartmentData(currentDepartment);
-        showStatusMessage({ MessageText: `Department ${currentDepartment.formMode} complete`, TimeoutIn: 5 });
-        if (currentDepartment.formMode === "add") {
-            const newDepartment: DepartmentModel = {
-                id: returnValue.id,
-                idString: returnValue.id.toString(),
-                name: returnValue.name,
-                isAssigned: false,
-                formMode: 'edit'
-            };
-            setDepartments(prevDepartments => [...prevDepartments, newDepartment]);
-        } else {
-            const returnedId = returnValue.id;
-            const changedName: string = returnValue.name;
-            if (departments !== null) {
-                setDepartments(prevDepartments =>
-                    prevDepartments.map(obj =>
-                        obj.id === returnedId
-                            ? { ...obj, name: changedName } // Update the name, keep other properties
-                            : obj
-                    )
-                );
+        const response = await postDepartmentData(currentDepartment);
+        const returnValue = await response.json();
+        if (response.ok) {
+            showStatusMessage({ MessageText: `Department ${currentDepartment.formMode} complete`, TimeoutIn: 5 });
+            if (currentDepartment.formMode === "add") {
+                const newDepartment: DepartmentModel = {
+                    id: returnValue.id,
+                    idString: returnValue.id.toString(),
+                    name: returnValue.name,
+                    isAssigned: false,
+                    formMode: 'edit'
+                };
+                setDepartments(prevDepartments => [...prevDepartments, newDepartment]);
+            } else {
+                const returnedId = returnValue.id;
+                const changedName: string = returnValue.name;
+                if (departments !== null) {
+                    setDepartments(prevDepartments =>
+                        prevDepartments.map(obj =>
+                            obj.id === returnedId
+                                ? { ...obj, name: changedName } // Update the name, keep other properties
+                                : obj
+                        )
+                    );
+                }
             }
+        } else {
+            showStatusMessage({ MessageText: `Update failed with error ${response.statusText}`, TimeoutIn: 5 })
         }
     }
 

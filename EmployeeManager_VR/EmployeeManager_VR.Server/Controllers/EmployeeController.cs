@@ -1,11 +1,10 @@
 ﻿using EmployeeManager_VR.Server.Data;
 using EmployeeManager_VR.Server.Models;
 using EmployeeManager_VR.Server.ViewModels;
-using EmployeeManager_VR.Server.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace EmployeeManager_VA.Server.Controllers
+namespace EmployeeManager_VR.Server.Controllers
 {
     [ApiController]
     [Route("[Controller]")]
@@ -19,16 +18,31 @@ namespace EmployeeManager_VA.Server.Controllers
             List<TEmEmployee>? employees = null;
 
             List<EmployeeViewModel>? returnValue = null;
+            var fetchErrorMessage = "Employee(s) fetch failed";
 
             if (id != null && id != 0)
             {
-                employees = await employeeManagerDbContext.TEmEmployees.Include(dept => dept.Department).Where(e => e.Id == id).ToListAsync();
+                try
+                {
+                    employees = await employeeManagerDbContext.TEmEmployees.Include(dept => dept.Department).Where(e => e.Id == id).ToListAsync();
+                }
+                catch (Exception e)
+                {
+                    fetchErrorMessage = e.Message;
+                }
             }
             else
             {
                 if (mode != null && mode.ToLower() == "list")
                 {
-                    employees = await employeeManagerDbContext.TEmEmployees.Include(dept => dept.Department).ToListAsync();
+                    try
+                    {
+                        employees = await employeeManagerDbContext.TEmEmployees.Include(dept => dept.Department).ToListAsync();
+                    }
+                    catch (Exception e)
+                    {
+                        fetchErrorMessage = e.Message;
+                    }
                 }
             }
 
@@ -39,7 +53,7 @@ namespace EmployeeManager_VA.Server.Controllers
                 {
                     var newEmployeeViewModel = new EmployeeViewModel();
 
-                    Utilities.CopySharedPropertyValues<TEmEmployee, EmployeeViewModel>(employee, newEmployeeViewModel);
+                    Utilities.Utilities.CopySharedPropertyValues<TEmEmployee, EmployeeViewModel>(employee, newEmployeeViewModel);
                     newEmployeeViewModel.DepartmentId = employee.DepartmentId;
                     newEmployeeViewModel.DepartmentIdString = newEmployeeViewModel.DepartmentId.ToString();
                     newEmployeeViewModel.RowNum = currentRow;
@@ -79,7 +93,8 @@ namespace EmployeeManager_VA.Server.Controllers
         [HttpPost(Name = "PostEmployee")]
         public async Task<IActionResult> Post([FromBody] EmployeeViewModel employeeViewModel)
         {
-            IActionResult actionResult = BadRequest("Unknown Error");
+            var errorMessage = "Employee Add or Update Failed";
+            IActionResult? actionResult = null;
 
             if (employeeViewModel != null)
             {
@@ -87,7 +102,7 @@ namespace EmployeeManager_VA.Server.Controllers
                 {
                     var newTEmEmployee = new TEmEmployee();
 
-                    Utilities.CopySharedPropertyValues<EmployeeViewModel, TEmEmployee>(employeeViewModel, newTEmEmployee);
+                    Utilities.Utilities.CopySharedPropertyValues<EmployeeViewModel, TEmEmployee>(employeeViewModel, newTEmEmployee);
 
                     employeeManagerDbContext.TEmEmployees.Add(newTEmEmployee);
                     var addResult = await employeeManagerDbContext.SaveChangesAsync(true);
@@ -104,64 +119,104 @@ namespace EmployeeManager_VA.Server.Controllers
                 }
                 else
                 {
-                    var rowToUpdate = await employeeManagerDbContext.TEmEmployees.Where(e => e.Id == employeeViewModel.Id).FirstOrDefaultAsync();
+                    TEmEmployee? rowToUpdate = null;
+
+                    try
+                    {
+                        rowToUpdate = await employeeManagerDbContext.TEmEmployees.Where(e => e.Id == employeeViewModel.Id).FirstOrDefaultAsync();
+                    }
+                    catch (Exception e)
+                    {
+                        errorMessage = e.Message;
+                    }
 
                     if (rowToUpdate != null)
                     {
-                        Utilities.CopySharedPropertyValues<EmployeeViewModel, TEmEmployee>(employeeViewModel, rowToUpdate);
+                        int? updateResult = null;
+                        Utilities.Utilities.CopySharedPropertyValues<EmployeeViewModel, TEmEmployee>(employeeViewModel, rowToUpdate);
 
                         employeeManagerDbContext.TEmEmployees.Update(rowToUpdate);
 
-                        var updateResult = await employeeManagerDbContext.SaveChangesAsync();
+                        try
+                        {
+                            updateResult = await employeeManagerDbContext.SaveChangesAsync();
+                        }
+                        catch(Exception e)
+                        {
+                            errorMessage = e.Message;
+                        }
 
-                        if (updateResult > 0)
+                        if (updateResult != null && updateResult > 0)
                         {
                             var returnEmployeeViewModel = new EmployeeViewModel();
                             var usedDepartmentName = await employeeManagerDbContext.TEmDepartments.Where(department => department.Id == rowToUpdate.DepartmentId).Select(department => department.Name).FirstOrDefaultAsync();
-                            Utilities.CopySharedPropertyValues<TEmEmployee, EmployeeViewModel>(rowToUpdate, returnEmployeeViewModel);
+                            Utilities.Utilities.CopySharedPropertyValues<TEmEmployee, EmployeeViewModel>(rowToUpdate, returnEmployeeViewModel);
                             returnEmployeeViewModel.DepartmentName = usedDepartmentName ?? "";
                             var updatedAtAction = new AcceptedAtActionResult("post", "employee", new { id = rowToUpdate.Id }, returnEmployeeViewModel);
                             actionResult = updatedAtAction;
                         }
                         else
                         {
-                            actionResult = BadRequest("Employee Update Failed.");
+                            errorMessage = "Employee Update Failed.";
                         }
                     }
                     else
                     {
-                        actionResult = BadRequest("Employee Record not found.");
+                        errorMessage = "Employee Record not found.";
                     }
                 }
             }
+
+            actionResult ??= BadRequest(errorMessage);
+
             return actionResult;
         }
 
         [HttpDelete(Name = "DeleteEmployee")]
         public async Task<IActionResult> Delete(int? Id)
         {
-            IActionResult returnValue;
+            var deleteErrorMessage = "Employee Delete Failed";
+
+            IActionResult? returnValue = null;
 
             if (Id == null)
             {
-                returnValue = BadRequest("Must specify an ID.");
+                deleteErrorMessage = "Must specify an ID.";
+                returnValue = BadRequest(deleteErrorMessage);
             }
             else
             {
-                var employeeRow = await employeeManagerDbContext.TEmEmployees.Where(e => e.Id == Id).FirstOrDefaultAsync();
+                TEmEmployee? employeeRow = null;
+
+                try
+                {
+                    employeeRow = await employeeManagerDbContext.TEmEmployees.Where(e => e.Id == Id).FirstOrDefaultAsync();
+                }
+                catch (Exception ex)
+                {
+                    deleteErrorMessage += ex.Message;
+                }
 
                 if (employeeRow != null)
                 {
+                    int? deleteResult = null;
                     employeeManagerDbContext.TEmEmployees.Remove(employeeRow);
-                    var deleteResult = await employeeManagerDbContext.SaveChangesAsync();
+                    try
+                    {
+                        deleteResult = await employeeManagerDbContext.SaveChangesAsync();
+                    }
+                    catch (Exception e)
+                    {
+                        deleteErrorMessage += e.Message;
+                    }
 
-                    if (deleteResult > 0)
+                    if (deleteResult != null && deleteResult > 0)
                     {
                         returnValue = Ok();
                     }
                     else
                     {
-                        returnValue = NotFound("Employee Delete Failed.");
+                        deleteErrorMessage = "Employee Delete Failed.";
                     }
                 }
                 else
@@ -169,6 +224,9 @@ namespace EmployeeManager_VA.Server.Controllers
                     returnValue = NotFound("Employee Not Found.");
                 }
             }
+
+            returnValue ??= BadRequest(deleteErrorMessage);
+
             return returnValue;
         }
     }

@@ -20,17 +20,14 @@ export async function postEmployeeData(employeeToUpdate: EmployeeModel) {
         body: JSON.stringify(employeeToUpdate)
     };
     const response = await fetch('/employee', requestOptions);
-    const data = await response.json();
-    console.log('Data: ');
-    console.log(data);
-    return data;
+    return response;
 }
 
 //Delete data
 export async function removeEmployee(id: number) {
     if (window.confirm("Are you sure?")) {
 
-        fetch(`/employee?id=${id}`,
+        await fetch(`/employee?id=${id}`,
             {
                 method: 'DELETE',
                 headers: {
@@ -38,8 +35,10 @@ export async function removeEmployee(id: number) {
                     'content-Type': 'application/json'
                 }
             })
-
-            .then(console.log("Deleted"))
+            .then(response => {
+                console.log("Deleted");
+                return response;
+            })
             .catch(err => console.log(err));
     }
 }
